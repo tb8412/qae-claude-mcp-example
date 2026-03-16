@@ -21,8 +21,20 @@ try:
         _initialize_certifier,
         _get_certifier,
     )
+    import qae_mcp_server.server as _server_module
 except ImportError:
     pytest.skip("qae_mcp_server module not available", allow_module_level=True)
+
+
+@pytest.fixture(autouse=True)
+def _reset_server_state():
+    """Reset global server state before each test to ensure isolation."""
+    _server_module._certifier = None
+    _server_module._adapter = None
+    _server_module._initialized = False
+    _server_module._certification_history.clear()
+    _server_module._total_certifications = 0
+    yield
 
 
 class TestInitialization:
@@ -184,7 +196,7 @@ class TestCheckBudgetTool:
         assert "budget_used" in result
         assert "budget_remaining" in result
         assert "rate_limit" in result
-        assert "certifications_this_period" in result
+        assert "total_certifications" in result
         assert "utilization_percent" in result
         assert "timestamp" in result
 

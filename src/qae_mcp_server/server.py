@@ -13,6 +13,7 @@ License: Apache-2.0
 """
 
 import logging
+import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from collections import deque
@@ -48,39 +49,51 @@ _certifier: Optional[SafetyCertifier] = None
 _adapter: Optional[AgenticAdapter] = None
 _certification_history: deque = deque(maxlen=50)  # Keep last 50 certifications
 _initialized = False
+_init_lock = threading.Lock()
 _BUDGET_LIMIT = 100.0
 _RATE_LIMIT = 50.0
+_total_certifications = 0  # Unbounded count (not capped by deque maxlen)
+
+
+def _sanitize_for_log(value: str) -> str:
+    """Sanitize a string for safe inclusion in log messages."""
+    return value.replace("\n", "\\n").replace("\r", "\\r")
 
 
 def _initialize_certifier() -> None:
-    """Initialize the SafetyCertifier on first use."""
+    """Initialize the SafetyCertifier on first use (thread-safe)."""
     global _certifier, _adapter, _initialized
 
     if _initialized:
         return
 
-    try:
-        # Create AgenticAdapter with sensible defaults
-        adapter = AgenticAdapter(
-            budget_limit=_BUDGET_LIMIT,
-            rate_limit=_RATE_LIMIT,
-        )
+    with _init_lock:
+        # Double-checked locking: re-check after acquiring lock
+        if _initialized:
+            return
 
-        # Create SafetyCertifier with configuration
-        config = CertifierConfig(
-            safe_threshold=0.6,      # margin > 0.6 => Certified
-            caution_threshold=0.3,   # margin in (0.3, 0.6] => CertifiedWithWarning
-            block_threshold=0.1,     # margin <= 0.1 => Blocked
-        )
+        try:
+            # Create AgenticAdapter with sensible defaults
+            adapter = AgenticAdapter(
+                budget_limit=_BUDGET_LIMIT,
+                rate_limit=_RATE_LIMIT,
+            )
 
-        _adapter = adapter  # Keep reference for budget queries
-        _certifier = SafetyCertifier(adapter, config=config)
-        _initialized = True
-        logger.info("SafetyCertifier initialized successfully")
+            # Create SafetyCertifier with configuration
+            config = CertifierConfig(
+                safe_threshold=0.6,      # margin > 0.6 => Certified
+                caution_threshold=0.3,   # margin in (0.3, 0.6] => CertifiedWithWarning
+                block_threshold=0.1,     # margin <= 0.1 => Blocked
+            )
 
-    except Exception as e:
-        logger.error(f"Failed to initialize SafetyCertifier: {e}")
-        raise
+            _adapter = adapter  # Keep reference for budget queries
+            _certifier = SafetyCertifier(adapter, config=config)
+            _initialized = True
+            logger.info("SafetyCertifier initialized successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize SafetyCertifier: {e}")
+            raise
 
 
 def _get_certifier() -> SafetyCertifier:
@@ -188,9 +201,11 @@ def certify_action(
             "description": description,
         }
         _certification_history.append(history_entry)
+        global _total_certifications
+        _total_certifications += 1
 
         logger.info(
-            f"Certified action {action_id}: {certificate.decision} "
+            f"Certified action {_sanitize_for_log(action_id)}: {certificate.decision} "
             f"(zone={certificate.zone}, cert_id={certificate.certificate_id})"
         )
 
@@ -227,9 +242,9 @@ def check_budget() -> Dict[str, Any]:
         Dictionary with keys:
         - budget_limit: Total safety budget [tokens/actions]
         - budget_used: Amount consumed in current period
-        - budget_remaining: budget_limit - budget_used
+        - budget_remaining: budget_limit - budget_used (clamped to >= 0)
         - rate_limit: Maximum certifications per period
-        - certifications_this_period: Number of certifications performed
+        - total_certifications: Total number of certifications performed
         - utilization_percent: (budget_used / budget_limit) * 100
         - timestamp: Current time (ISO 8601)
     """
@@ -238,15 +253,15 @@ def check_budget() -> Dict[str, Any]:
 
         utilization = _adapter.budget_utilization()
         budget_used = utilization * _BUDGET_LIMIT
-        certifications_count = len(_certification_history)
+        budget_remaining = max(0.0, _BUDGET_LIMIT - budget_used)
 
         response = {
             "budget_limit": _BUDGET_LIMIT,
             "budget_used": round(budget_used, 2),
-            "budget_remaining": round(_BUDGET_LIMIT - budget_used, 2),
+            "budget_remaining": round(budget_remaining, 2),
             "budget_utilization": round(utilization, 4),
             "rate_limit": _RATE_LIMIT,
-            "certifications_this_period": certifications_count,
+            "total_certifications": _total_certifications,
             "utilization_percent": round(utilization * 100, 2),
             "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         }
