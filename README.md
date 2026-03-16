@@ -1,5 +1,7 @@
 # QAE Safety Certification — Claude MCP Server
 
+<!-- mcp-name: io.github.tb8412/qae-safety-mcp -->
+
 An MCP (Model Context Protocol) server that gives Claude access to deterministic safety certification for autonomous actions. Built on the QAE safety kernel, this server enables Claude to evaluate the safety profile of proposed actions across multiple constraint dimensions (scope, reversibility, sensitivity) before execution.
 
 ## Architecture
