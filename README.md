@@ -162,9 +162,11 @@ Check current budget utilization.
   "budget_limit": 100.0,
   "budget_used": 34.5,
   "budget_remaining": 65.5,
+  "budget_utilization": 0.345,
   "rate_limit": 50.0,
   "certifications_this_period": 5,
-  "reset_time": "2025-03-15T23:59:59Z"
+  "utilization_percent": 34.5,
+  "timestamp": "2025-03-15T14:23:45Z"
 }
 ```
 
