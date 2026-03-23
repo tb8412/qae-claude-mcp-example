@@ -4,6 +4,8 @@
 
 An MCP (Model Context Protocol) server that gives Claude access to deterministic safety certification for autonomous actions. Built on the QAE safety kernel, this server enables Claude to evaluate the safety profile of proposed actions across multiple constraint dimensions (scope, reversibility, sensitivity) before execution.
 
+[![QAE-Claude-mcp-example MCP server](https://glama.ai/mcp/servers/tb8412/qae-claude-mcp-example/badges/card.svg)](https://glama.ai/mcp/servers/tb8412/qae-claude-mcp-example)
+
 ## Architecture
 
 ```
