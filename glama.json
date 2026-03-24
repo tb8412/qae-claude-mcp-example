@@ -15,8 +15,4 @@
   "homepage": "https://qaesubstrate.com",
   "categories": ["ai-safety", "certification", "autonomous-agents"],
   "tags": ["safety", "certification", "risk", "constraints", "deterministic", "ai-agents"],
-  "related_servers": [
-    "modelcontextprotocol/servers/filesystem",
-    "modelcontextprotocol/servers/github"
-  ]
 }
