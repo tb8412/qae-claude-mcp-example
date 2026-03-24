@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "qae-safety>=0.1.1",
+    "qae-safety==0.1.2",
     "mcp>=1.0.0",
 ]
 
@@ -52,6 +52,11 @@ packages = ["qae_mcp_server"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
 
 [tool.black]
 line-length = 100
