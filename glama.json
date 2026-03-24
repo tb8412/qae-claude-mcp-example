@@ -1,4 +1,8 @@
 {
+    "$schema": "https://glama.ai/mcp/servers/tb8412/qae-claude-mcp-example",
+  "maintainers": [
+    "tb8412"
+  ]
   "name": "qae-safety-mcp",
   "display_name": "QAE Safety Certification",
   "description": "Deterministic safety certification for autonomous AI actions. Evaluates scope, reversibility, and sensitivity across constraint channels before execution.",
